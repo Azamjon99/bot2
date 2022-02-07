@@ -1,0 +1,11 @@
+<?php
+
+namespace App\Interfaces;
+
+interface TripRepositoryInterface 
+{
+    public function getTrips($lang);
+
+    public function createTrip(array $userDetails);
+
+}

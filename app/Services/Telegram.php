@@ -5,7 +5,7 @@ namespace App\Services;
 
 use phpDocumentor\Reflection\Types\Null_;
 
-class Telegram
+class Telegram 
 {
 
     protected $token = '1682534615:AAFuct679YAc46yGIQrw7LBvWtDueNeK2J4';
@@ -64,6 +64,10 @@ class Telegram
             'parse_mode' => 'HTML',
             'disable_web_page_preview' => $web,
         ];
+
+        // if($keyboard=="phone"){
+        //     $this->data['reply_markup'] = 
+        // }
         if ($keyboard) { 
             if(!$inline){
                 $this->data['reply_markup'] = $this->makeKeyboard($keyboard);

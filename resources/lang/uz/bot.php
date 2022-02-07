@@ -15,6 +15,9 @@ return [
 
     'language' => 'Siz o’zbek tilini tanladingiz',
     'name' => 'Ismingizni kiriting',
-
+    'phone' => 'Telefon raqamingizni kiriting',
+    'form' => "Arizani qoldirish uchun ro'yxatdan o’zingizga mos turni tanlang.",
+    'phone_validation' => "Iltimos telefon formatini to'g'ri kiriting.",
+    'country' => "Qaysi davlatga borishni rejalashtiryapsiz?",
 
 ];
