@@ -23,6 +23,13 @@ return [
     'hotel' => "Mehmonxona nomini kiriting yoki davom etishni tanlang",
     'next' => 'Keyingisi',
     'start_date' => "Safarning boshlanish sanasini kiriting kun.oy.yil",
-    'Qancha kecha qolishni hohlaysiz?'=> 'Qancha kecha qolishni hohlaysiz?',
+    'night'=> 'Qancha kecha qolishni hohlaysiz?',
+    'number'=> 'Kattalar sonini kiriting',
+    'children'=> "Siz bilan birga bolalar yoki chaqaloqlar bo'ladimi?",
+    'numberChildren'=> 'Bolalar sonini kiriting',
+    'numberBaby'=> 'Chaqaloqlar sonini kiriting',
+    'yes'=> 'Ha',
+    'no'=> "Yo'q",
+    'bilet'=> 'Sizga aviachipta kerakmi?',
 
 ];

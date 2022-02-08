@@ -1,215 +1,222 @@
 <?php
-
-
 namespace App\Http\Controllers;
 
-use App\Category;
-use App\Product;
-use App\Models\User;
-use App\Http\Controllers\Controller;
+use App\Interfaces\CountryRepositoryInterface;
+use App\Interfaces\OrderRepositoryInterface;
+use App\Interfaces\TripRepositoryInterface;
+use App\Interfaces\UserRepositoryInterface;
 use App\Services\Telegram;
 use Illuminate\Http\Request;
-use phpDocumentor\Reflection\Types\Null_;
+use Illuminate\Support\Facades\App;
 
-class BotController extends Controller
+
+class BotController extends BaseController
 {
-    protected $telegram;
-    protected $requestData;
-    protected $chatId;
-    protected $callback_data;
-    protected $call_Message_id;
-    protected $message_id;
-    protected $user;
-    protected $l_query;
-   
+    protected $telegram, $requestData, $chatId, $callback_data, $call_Message_id,$message_id, $user, $phone_number, $command, $country, $trip, $order;
     public function __construct()
     {
         $this->telegram = new Telegram();
     }
-
-    public function index(Request $request){
-
+ 
+    public function index(Request $request, UserRepositoryInterface $user, CountryRepositoryInterface $country, TripRepositoryInterface $trip, OrderRepositoryInterface $order)
+    {
+        // var_dump('ssd'); exit; 
+        $this->order=$order;
+        $this->trip = $trip;
+        $this->country =$country;
         $this->requestData = $this->telegram->requestData($request->all());
         $this->chatId = $this->requestData['message']['chat']['id'] ?? null;
         $command = $this->requestData['message']['text'] ?? null;
+        $this->phone_number = $this->requestData['message']['contact']['phone_number'] ?? null;
         $userId = $this->requestData['message']['from']['id'] ?? null;
-        $forwardFromChat = $this->requestData['message']['forward_from_chat'] ?? null;
+        // $forwardFromChat = $this->requestData['message']['forward_from_chat'] ?? null;
         $this->callback_data = $this->requestData['callback_query']['data'] ?? null;
         $this->call_Message_id = $this->requestData['callback_query']['message']['chat']['id'] ?? null;
         $this->message_id = $this->requestData['callback_query']['message']['message_id'] ?? null;
 
-
-        if ($userId) {
-            if (file_exists(public_path('tg-data/'.$userId.'.json'))) {
-                $userData = @file_get_contents(public_path('tg-data/'.$userId.'.json'));
-                $userData = $userData ? json_decode($userData, true): null;
-            } else {
-                $userData = [
-                    'id' => $userId,
-                    'name' => $userData['name'] ?? ($this->requestData['message']['from']['first_name'] ?? null),
-                    'last_name' => $userData['last_name'] ?? ($this->requestData['message']['from']['last_name'] ?? null),
-                    'username' => $userData['username'] ?? ($this->requestData['message']['from']['username'] ?? null),
-                    'last_query' => $lastQuery ?? '/start',
-                ];
-                @file_put_contents(public_path('tg-data/'.$userId.'.json'), json_encode($userData));
+        if ($userId) 
+        {
+            $json = $this->getFromFile($userId);
+            if ($json) 
+            {
+                $this->user = $json;
+                App::setLocale($this->user->lang);
+            } 
+            else 
+            {
+                $this->user = ['id' => $userId, 'lang'=>'uz'];
+                $this->putFile();
             }
-            $this->user = $userData;
-            $this->l_query=$userData['last_query'];
         }
-
         if ($command == '/start') 
-    {
+        {
+            $this->telegram->sendMessage($this->chatId,"Выберите язык", $this->chooseLanguage());
+            $this->telegram->sendMessage($this->chatId,"Tilni tanlang", $this->chooseLanguage());
+            $this->setLastQuery('/start');
+        }
+        elseif($this->user->last_query=="/start") {
+            if($command == 'Russian') 
+            {
+                $this->setLanguage('ru');
+                $this->telegram->sendMessage($this->chatId, __('bot.language'));
+                $this->telegram->sendMessage($this->chatId, __('bot.name'));
+                $this->setLastQuery(__('bot.name'));
+            }
+            elseif($command == 'Uzbek(Latin)') 
+            {
+                $this->setLanguage('uz');
+                $this->telegram->sendMessage($this->chatId, __('bot.language'));
+                $this->telegram->sendMessage($this->chatId,__('bot.name'));
+                $this->setLastQuery(__('bot.name'));
+            }
+            else
+            {
+                $this->telegram->sendMessage($this->chatId, 'Please choose the language');
+            }
+        }
+       
+        elseif($this->user->last_query == __('bot.name'))
+        {
+            $this->user->name = $command;
+            $this->telegram->sendMessage($this->chatId, __('bot.phone'), $this->sendPhoneNumber());
+            $this->setLastQuery(__('bot.phone'));
+        }
+        elseif($this->user->last_query == __('bot.phone'))
+        {
+            $this->setPhone($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.form'), $this->chooseTrip());
+            $this->setLastQuery(__('bot.form'));
+        }
+        elseif($this->user->last_query == __('bot.form'))
+        {
+            $this->setTrip($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.country'), $this->chooseCountry());
+            $this->setLastQuery(__('bot.country'));
+        }
+        elseif($this->user->last_query == __('bot.country'))
+        {
+            $this->setCountry($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.hotel'),$this->nextButton());
+            $this->setLastQuery(__('bot.hotel'));
+        }
+        elseif($this->user->last_query == __('bot.hotel'))
+        {
+            if($command == __('bot.next'))
+            {
+                $this->setHotel("not entered");
+                $this->telegram->sendMessage($this->chatId, __('bot.start_date'));
+                $this->setLastQuery(__('bot.start_date'));
+            }
+            else
+            {
+                $this->setHotel($command);
+                $this->telegram->sendMessage($this->chatId, __('bot.start_date'));
+                $this->setLastQuery(__('bot.start_date'));
+            }
+        }
+        elseif($this->user->last_query == __('bot.start_date'))
+        {
+            // $this->validateData($command);
+            $this->setDate($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.night'));
+            $this->setLastQuery(__('bot.night'));
+        }
+        elseif($this->user->last_query == __('bot.night')){
+            $this->setNights($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.number'));
+            $this->setLastQuery(__('bot.number'));
+        }
+        elseif($this->user->last_query == __('bot.number')){
+            $this->setNumber($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.children'), $this->checkChildren());
+            $this->setLastQuery(__('bot.children'));
+        }
+        elseif($this->user->last_query == __('bot.children'))
+        {
+            if($command==__('bot.yes')){
+                $this->telegram->sendMessage($this->chatId, __('bot.numberChildren'));
+                $this->telegram->sendMessage($this->chatId, __('bot.numberBaby'));
+                $this->setLastQuery(__('bot.numberBaby'));
 
-            $this->telegram->sendMessage($this->chatId,
-            "Assalomu alaykum " . $userData['name'] ." ecopen.uz saytining botiga xush kelibsiz ", $this->mainKeyboard()
-            );
+            }
+            elseif($command==__('bot.no'))
+            {
+                $this->telegram->sendMessage($this->chatId, __('bot.bilet'));
+                $this->setLastQuery(__('bot.bilet'));
+            }else
+            {
+                $this->telegram->sendMessage($this->chatId, __('Xato javob yuborildi'));exit;
+            }
+        }
+        elseif($this->user->last_query == __('bot.numberBaby')){
+            $this->setNumberChildren($command);
+            $this->telegram->sendMessage($this->chatId, __('bot.bilet'));
+            $this->setLastQuery(__('bot.bilet'));
+        }
+}
+
+
+    // public function productsKeyboard($category)
+    // {
+    //     //  $categories = Category::all();
+    //     // foreach($categories as $category){
+    //     foreach($category->products as $product) {
+    //         $data[] = [
+    //             $this->telegram->makeButton($product->name),
+    //         ];
+    //     }
+    //     return $data;
+
+    // }
+
+
+//     public function inlineOptionsKeyboard($product){
+
+//         $options=$product->productOptionValues;
+//         $optionPrice=$product->productValues;
+//         $keyboard = [
             
-
-    } elseif($command=="Maxsulot turlari"){
-
-        $this->telegram->sendMessage($this->chatId,
-            "Kategoriya tanlang" , $this->categoriesKeyboard()
-        );
-    }
-    // $category = Category::whereName($command)->first();
+//         ];
+// if(count($options)%2){
+//     $last_option=count($options)%2;
+//     for($i=0; $i<count($options)-1; $i+=2 ){
+//         $keyboard[]=[
+//             $this->telegram->makeInlineButton($options[$i]['name'] . " - " . $optionPrice[$i]['value'] ,
+//             "https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
+//             $this->telegram->makeInlineButton($options[$i+1]['name'] . " - " . $optionPrice[$i]['value'] ,
+//             "https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
     
-    // var_dump($products);exit;
-  elseif($category=Category::where('name', $command)->first()){
+//         ];
+//     }
+//     $keyboard[]=[
+//         $this->telegram->makeInlineButton($options[$last_option]['name'],"https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
+    
+//     ];
+// }else{
+// for($i=0; $i<count($options)-1; $i+=2 ){
+//     $keyboard[]=[
+//         $this->telegram->makeInlineButton1($options[$i]['name']. " - " . $optionPrice[$i]['value'],
+//         $optionPrice[$i]['product_id']  ),
+//        $this->telegram->makeInlineButton1($options[$i+1]['name']. " - " . $optionPrice[$i]['value'],
+//        $optionPrice[$i+1]['product_id']),
 
-    foreach($category->products as $product){
-        $this->telegram->sendMessage($this->chatId,
-            $product->name . " - $" . $product->price, $this->inlineOptionsKeyboard($product), true, true
-        );
-        
-    }
-  }
+//     ];
+// }
+// }
+// $keyboard[]=[
+//     $this->telegram->makeInlineButton("orqaga","https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
 
-  elseif($this->callback_data)
-  {
-  
-     $product=Product::where('id', $this->callback_data)->first();
-     
-     $this->telegram->editMessageText($this->call_Message_id, $this->message_id,
-     $product->name . "  choosed  - $" . $product->price , $this->inlineOptionsKeyboard($product),  true, true
- );
-  }
-
-    elseif($command=="Ortga"){
-        $this->telegram->sendMessage($this->chatId,
-            "Muvaffaqqiyatli qaytildi", $this->mainKeyboard()
-            );
-    }
-
-
-   
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-protected function mainKeyboard()
-{
-    $data[] = [
-        $this->telegram->makeButton("Maxsulot turlari"),
-        $this->telegram->makeButton("Мои каналы")
-    ];
-    return $data;
-}
- public function categoriesKeyboard(){
-    $categories= Category::all();
- 
-// $data=[];
-  foreach($categories as $key => $category){
-        $data[]=[
-            $this->telegram->makeButton($category->name)
-        ];
- } 
-//  $data[]=[
-//     $this->telegram->makeButton("Ortga")
 // ];
 
-     return $data;
-
- }
-    public function productsKeyboard($category)
-    {
-        //  $categories = Category::all();
-        // foreach($categories as $category){
-        foreach($category->products as $product) {
-            $data[] = [
-                $this->telegram->makeButton($product->name),
-            ];
-        }
-        return $data;
-
-    }
-
-
-    public function inlineOptionsKeyboard($product){
-
-        $options=$product->productOptionValues;
-        $optionPrice=$product->productValues;
-        $keyboard = [
-            
-        ];
-if(count($options)%2){
-    $last_option=count($options)%2;
-    for($i=0; $i<count($options)-1; $i+=2 ){
-        $keyboard[]=[
-            $this->telegram->makeInlineButton($options[$i]['name'] . " - " . $optionPrice[$i]['value'] ,
-            "https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
-            $this->telegram->makeInlineButton($options[$i+1]['name'] . " - " . $optionPrice[$i]['value'] ,
-            "https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
-    
-        ];
-    }
-    $keyboard[]=[
-        $this->telegram->makeInlineButton($options[$last_option]['name'],"https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
-    
-    ];
-}else{
-for($i=0; $i<count($options)-1; $i+=2 ){
-    $keyboard[]=[
-        $this->telegram->makeInlineButton1($options[$i]['name']. " - " . $optionPrice[$i]['value'],
-        $optionPrice[$i]['product_id']  ),
-       $this->telegram->makeInlineButton1($options[$i+1]['name']. " - " . $optionPrice[$i]['value'],
-       $optionPrice[$i+1]['product_id']),
-
-    ];
-}
-}
-$keyboard[]=[
-    $this->telegram->makeInlineButton("orqaga","https://core.telegram.org/bots/api#inlinekeyboardbutton" ),
-
-];
-
-        return $keyboard;
+//         return $keyboard;
      
-    }
+//     }
 
 
 
 
 
 
-
-
-    public function setLastQuery($lastQuery)
-    {
-        $this->l_query = $lastQuery;
-        @file_put_contents(public_path('tg-data/'.$this->user['id'].'.json'), json_encode($this->user));
-    }
 
 
     

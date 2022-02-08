@@ -57,6 +57,11 @@ protected function nextButton()
     } 
         return $data ;
  }
+ public function checkChildren()
+ {
+    $data[] = [$this->telegram->makeButton(__('bot.yes')),$this->telegram->makeButton(__('bot.no'))];
+    return $data;
+ }
 public function chooseCountry()
 {
     $countries = $this->order->getPopularCountries($this->user->lang);
@@ -136,6 +141,16 @@ public function setDate($date)
 public function setNights($night)
 {
     $this->user->night = $night;
+    $this->putFile(); 
+}
+public function setNumber($number)
+{
+    $this->user->number = $number;
+    $this->putFile(); 
+}
+public function setNumberChildren($number)
+{
+    $this->user->numberChildren = $number;
     $this->putFile(); 
 }
 public function setCountries($country)
