@@ -18,6 +18,11 @@ return [
     'phone' => 'Telefon raqamingizni kiriting',
     'form' => "Arizani qoldirish uchun ro'yxatdan o’zingizga mos turni tanlang.",
     'phone_validation' => "Iltimos telefon formatini to'g'ri kiriting.",
+    'date_validation' => "Iltimos sana formatini to'g'ri kiriting.",
     'country' => "Qaysi davlatga borishni rejalashtiryapsiz?",
+    'hotel' => "Mehmonxona nomini kiriting yoki davom etishni tanlang",
+    'next' => 'Keyingisi',
+    'start_date' => "Safarning boshlanish sanasini kiriting kun.oy.yil",
+    'Qancha kecha qolishni hohlaysiz?'=> 'Qancha kecha qolishni hohlaysiz?',
 
 ];

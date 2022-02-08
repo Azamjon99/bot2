@@ -30,8 +30,12 @@ class OrderRepository implements OrderRepositoryInterface
         $order = new UserAndCountry();
         $order->user_id = $id;
         $order->country_id = $countryId;
-        $order->save;
+        $order->save();
 
+    }
+    public function addHotel($id, $hotelId)
+    {
+        $order = UserAndCountry::where('user_id', $id)->latest();
     }
 
     }

@@ -25,6 +25,9 @@ class TripRepository implements TripRepositoryInterface
         return Trip::create($countryDetails);
     }
 
-
+    public function getTripByName($name) 
+    {
+       return $country = Trip::whereTranslation('name', $name)->first();
+    }
 
 }

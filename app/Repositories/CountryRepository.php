@@ -21,8 +21,14 @@ class CountryRepository implements CountryRepositoryInterface
 
     public function getCountryByName($countryName) 
     {
-         var_dump(Country::whereTranslation('name', 1, 'ru')->get());exit;
-      return  Country::whereTranslation('name', $countryName)->first();
+       return $country = Country::whereTranslation('name', $countryName)->first();
+    }
+
+
+    public function getCountryBySimilar($countryName) 
+    {
+       
+        return $country = Country::whereTranslationLike('name', "%" . $countryName . "%")->get();
     }
 
     // public function deleteCountry($countryId) 
